@@ -21,14 +21,28 @@ df <- read.delim('pseudo_facebook.tsv')
 Notes:
 
 ```{r Histogram of Users\' Birthdays}
-install.packages('ggplot2')
+#install.packages('ggplot2')
 library(ggplot2)
+#install.packages('ggthemes', dependencies = T)
+#library(ggthemes)
+qplot(x = dob_day, data = df) +
+  scale_x_continuous(breaks=1:31)
 ```
 
 ***
 
+This is the same as the code below:
+
+```{r}
+library(ggplot2)
+ggplot(aes(x = dob_day), data = df) +
+  geom_histogram(binwidth = 1) +
+  scale_x_continuous(breaks = 1:31)
+```
+
+***
 #### What are some things that you notice about this histogram?
-Response:
+Response: bod is highly concentrated on the 1st, while 31 has a low concentration. 31st will be normal, as there are no 31st in some months. The rest are near uniform.
 
 ***
 
@@ -58,10 +72,15 @@ Notes:
 
 ***
 ### Faceting
-Notes:
+Notes: This works for each level of your categorical variable
+facet_wrap(~VARIABLE)
+facet_grid(VERTICAL~HORIZONTAL)
 
 ```{r Faceting}
-
+ggplot(data = df, aes(x = dob_day)) +
+  geom_histogram(binwidth = 1) +
+  scale_x_continuous(breaks = 1:31) +
+  facet_wrap(~dob_month, ncol=4)
 ```
 
 #### Let’s take another look at our plot. What stands out to you here?
@@ -87,7 +106,8 @@ Notes:
 #### What code would you enter to create a histogram of friend counts?
 
 ```{r Friend Count}
-
+ggplot(data = df, aes(x=friend_count)) +
+  geom_histogram()
 ```
 
 #### How is this plot similar to Moira's first plot?
@@ -99,11 +119,18 @@ Response:
 Notes:
 
 ```{r Limiting the Axes}
-
+ggplot(data = df, aes(x=friend_count)) +
+  geom_histogram() +
+  scale_x_continuous(limits = c(0,1000))
 ```
 
 ### Exploring with Bin Width
 Notes:
+```{r}
+ggplot(aes(x = friend_count), data = df) +
+  geom_histogram(binwidth = 25) +
+  scale_x_continuous(limits = c(0, 1000), breaks = seq(0, 1000, 50))
+```
 
 ***
 
@@ -114,9 +141,10 @@ Notes:
 ```{r Faceting Friend Count}
 # What code would you add to create a facet the histogram by gender?
 # Add it to the code below.
-qplot(x = friend_count, data = pf, binwidth = 10) +
-  scale_x_continuous(limits = c(0, 1000),
-                     breaks = seq(0, 1000, 50))
+ggplot(aes(x = friend_count), data = df) +
+  geom_histogram(binwidth = 25) +
+  scale_x_continuous(limits = c(0, 1000), breaks = seq(0, 1000, 50)) +
+  facet_wrap(~gender)
 ```
 
 ***
@@ -125,7 +153,10 @@ qplot(x = friend_count, data = pf, binwidth = 10) +
 Notes:
 
 ```{r Omitting NA Values}
-
+ggplot(aes(x = friend_count), data = subset(df, !is.na(gender))) +
+  geom_histogram(binwidth = 25) +
+  scale_x_continuous(limits = c(0, 1000), breaks = seq(0, 1000, 50)) +
+  facet_wrap(~gender)
 ```
 
 ***
@@ -134,17 +165,17 @@ Notes:
 Notes:
 
 ```{r Statistics \'by\' Gender}
-
+by(df$friend_count, df$gender, summary)
 ```
 
 #### Who on average has more friends: men or women?
-Response:
+Response: women
 
 #### What's the difference between the median friend count for women and men?
-Response:
+Response: 22
 
 #### Why would the median be a better measure than the mean?
-Response:
+Response: since the distribution is long-tailed, the higher ends drag up the mean. Median is less sensitive to change, thus more robust.
 
 ***
 
@@ -152,7 +183,8 @@ Response:
 Notes:
 
 ```{r Tenure}
-
+ggplot(aes(x = tenure), data = df) +
+  geom_histogram(binwidth = 30, color = 'black', fill = '#099DD9')
 ```
 
 ***
@@ -160,7 +192,8 @@ Notes:
 #### How would you create a histogram of tenure by year?
 
 ```{r Tenure Histogram by Year}
-
+ggplot(aes(x=tenure/365), data = df) +
+  geom_histogram(binwidth = 25/365, color = 'black', fill = '#F79420')
 ```
 
 ***
@@ -169,7 +202,11 @@ Notes:
 Notes:
 
 ```{r Labeling Plots}
-
+ggplot(aes(x=tenure/365), data = df) +
+  geom_histogram(binwidth = 25/365, color = 'black', fill = '#F79420') +
+  scale_x_continuous(breaks = seq(1, 7, 1), limits = c(0,7)) +
+  xlab('# years using Facebook') + 
+  ylab('# users in sample')
 ```
 
 ***
@@ -178,7 +215,9 @@ Notes:
 Notes:
 
 ```{r User Ages}
-
+ggplot(aes(x=age), data = df) +
+  geom_histogram(binwidth = 1) +
+  scale_x_continuous(breaks = seq(0, 115, 5), limits = c(0,115))
 ```
 
 #### What do you notice?
@@ -198,6 +237,23 @@ Notes:
 
 ### Transforming Data
 Notes:
+```{r}
+summary(df$friend_count)
+#this has -inf, as some has friend_count == 0.
+summary(log10(df$friend_count))
+#counter by adding 1 overall
+summary(log10(df$friend_count + 1))
+
+#3 plots
+install.packages('gridExtra')
+library(gridExtra)
+
+p1 = ggplot(aes(x = friend_count), data = df) +
+  geom_histogram(binwidth = .25)
+p2 = p1 + scale_x_log10()
+p3 = p1 + scale_x_sqrt()
+grid.arrange(p1, p2, p3)
+```
 
 ***
 
@@ -205,7 +261,15 @@ Notes:
 Notes:
 
 ```{r Add a Scaling Layer}
+logScale <- ggplot(aes(x = log10(friend_count)), data = df) +
+  geom_histogram()
 
+#preferred
+countScale <- ggplot(aes(x = friend_count), data = df) +
+  geom_histogram() +
+  scale_x_log10()
+
+grid.arrange(logScale, countScale, ncol = 2)
 ```
 
 ***
@@ -214,7 +278,15 @@ Notes:
 ### Frequency Polygons
 
 ```{r Frequency Polygons}
+ggplot(aes(x=friend_count, y=..count../sum(..count..)), 
+       data = subset(df, !is.na(gender))) +
+  geom_freqpoly(aes(color = gender), binwidth = 10) +
+  #scale_x_continuous(limits = c(0,1000), breaks = seq(0, 1000, 50))
+  scale_x_log10()
 
+ggplot(aes(x = www_likes), data = subset(df, !is.na(gender))) +
+  geom_freqpoly(aes(color = gender)) +
+  scale_x_log10()
 ```
 
 ***
@@ -223,7 +295,7 @@ Notes:
 Notes:
 
 ```{r Likes on the Web}
-
+by(df$www_likes, df$gender, sum)
 ```
 
 
@@ -233,13 +305,16 @@ Notes:
 Notes:
 
 ```{r Box Plots}
-
+ggplot(aes(x = gender, y = friend_count), data = subset(df, !is.na(gender))) +
+  geom_boxplot()
 ```
 
 #### Adjust the code to focus on users who have friend counts between 0 and 1000.
 
 ```{r}
-
+ggplot(aes(x = gender, y = friend_count), data = subset(df, !is.na(gender))) +
+  geom_boxplot() + 
+  coord_cartesian(ylim = c(0, 1000))
 ```
 
 ***
@@ -248,7 +323,11 @@ Notes:
 Notes:
 
 ```{r Box Plots, Quartiles, and Friendships}
+ggplot(aes(x = gender, y = friend_count), data = subset(df, !is.na(gender))) +
+  geom_boxplot() + 
+  coord_cartesian(ylim = c(0, 250))
 
+by(df$friend_count, df$gender, summary)
 ```
 
 #### On average, who initiated more friendships in our sample: men or women?
@@ -256,7 +335,9 @@ Response:
 #### Write about some ways that you can verify your answer.
 Response:
 ```{r Friend Requests by Gender}
-
+ggplot(aes(x = gender, y = friendships_initiated), data = subset(df, !is.na(gender))) +
+  geom_boxplot() +
+  coord_cartesian(ylim = c(0,150))
 ```
 
 Response:
@@ -267,7 +348,12 @@ Response:
 Notes:
 
 ```{r Getting Logical}
-
+mobile_check_in <- NA
+df$mobile_check_in <- ifelse(df$mobile_likes > 0, 1, 0)
+df$mobile_check_in <- factor(df$mobile_check_in)
+summary(df$mobile_check_in)[2] / (summary(df$mobile_check_in)[1] + summary(df$mobile_check_in)[2])
+#or
+sum(df$mobile_check_in == 1)/length(df$mobile_check_in)
 ```
 
 Response:
@@ -276,6 +362,8 @@ Response:
 
 ### Analyzing One Variable
 Reflection:
+Close look (zooming in) important. Types, distribution, missing, outliers. W. histogram, freqpoly, boxplot.
+Adjustments - limits, log / sqrt , binaries...
 
 ***
 
