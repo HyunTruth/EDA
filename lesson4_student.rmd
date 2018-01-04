@@ -217,24 +217,28 @@ Notes:
 ```{r More Caution With Correlation}
 install.packages('alr3')
 library(alr3)
+data(Mitchell)
+dim(Mitchell)
 ```
 
 Create your plot!
 
 ```{r Temp vs Month}
-
+ggplot(aes(x = Month, y = Temp), data = Mitchell) +
+  geom_point()
 ```
 
 ***
 
 ### Noisy Scatterplots
 a. Take a guess for the correlation coefficient for the scatterplot.
+0
 
 b. What is the actual correlation of the two variables?
 (Round to the thousandths place)
 
 ```{r Noisy Scatterplots}
-
+with(Mitchell, cor.test(Month, Temp))
 ```
 
 ***
@@ -243,7 +247,13 @@ b. What is the actual correlation of the two variables?
 Notes:
 
 ```{r Making Sense of Data}
+ggplot(aes(x = Month, y = Temp), data = Mitchell) +
+  geom_point() +
+  scale_x_continuous(breaks = seq(0, 203, 12))
 
+#or modulo:
+ggplot(aes(x = (Month%%12), y=Temp), data = Mitchell) +
+  geom_point()
 ```
 
 ***
@@ -262,7 +272,9 @@ Notes:
 Notes:
 
 ```{r Understanding Noise: Age to Age Months}
-
+ggplot(aes(x=age, y=friendcount_mean), data = df.fc_by_age) +
+  geom_line()
+df$age_with_months <- df$age + (1 - df$dob_month / 12)
 ```
 
 ***
@@ -270,7 +282,12 @@ Notes:
 ### Age with Months Means
 
 ```{r Age with Months Means}
-
+df.fc_by_age_months <- df %>%
+  group_by(age_with_months) %>%
+  summarise(friend_count_mean = mean(friend_count),
+            friend_count_median = median(friend_count),
+            n = n()) %>%
+  arrange(age_with_months)
 ```
 
 Programming Assignment
@@ -283,28 +300,48 @@ Programming Assignment
 ### Noise in Conditional Means
 
 ```{r Noise in Conditional Means}
-
+ggplot(aes(x = age_with_months, y= friend_count_mean), data = subset(df.fc_by_age_months, age_with_months < 71)) +
+  geom_line()
 ```
 
 ***
 
 ### Smoothing Conditional Means
-Notes:
+Notes: By increasing the size of the bins, the noise is smoothed, as a bunch. 
+Less data points, wider binwidth -> more precise means, but may miss out on the important features of the relationship.
+
+"Bias - Variance Tradeoff"
 
 ```{r Smoothing Conditional Means}
+p1 <- ggplot(aes(x = age_with_months, y= friend_count_mean), 
+             data = subset(df.fc_by_age_months, age_with_months < 71)) +
+  geom_line() +
+  geom_smooth()
 
+p2 <- ggplot(aes(x=age, y=friendcount_mean), data = subset(df.fc_by_age, age < 71)) +
+  geom_line() +
+  geom_smooth()
+
+p3 <- ggplot(aes(x=round(age/5) * 5, y=friend_count), data = subset(df, age < 71)) +
+  geom_line(stat = "summary", fun.y = mean)
+
+library(gridExtra)
+grid.arrange(p1, p2, p3)
 ```
 
 ***
 
 ### Which Plot to Choose?
-Notes:
+Notes: You don't have to choose. We can have multiple viz & summaries for the same data.
+geom_smooth() can help to see a smoothed trend in the relationship. However, still subject to systematic errors (for example, discontinuity on age 69)
 
 ***
 
 ### Analyzing Two Variables
 Reflection:
-
+Scatter plot the main, but also with conditional summaries, such as means. Also, alpha / jitter. 
+Do not trust the first data that you see.
+Correlation lets you decide which data to use.
 ***
 
 Click **KnitHTML** to see all of your hard work and to have an html
