@@ -7,7 +7,7 @@ Notes:
 ***
 
 ### Moira Perceived Audience Size Colored by Age
-Notes:
+Notes: Tried color, did not tell much
 
 ***
 
@@ -15,8 +15,14 @@ Notes:
 Notes:
 
 ```{r Third Qualitative Variable}
-ggplot(aes(x = gender, y = age),
-       data = subset(pf, !is.na(gender))) + geom_histogram()
+library(ggplot2)
+df <- read.delim('pseudo_facebook.tsv')
+df.fc_by_age_gender <- subset(df, !is.na(gender)) %>%
+  group_by(age, gender) %>%
+  summarise(mean_friend_count = mean(friend_count),
+            median_friend_count = median(friend_count),
+            n = n()) 
+head(df.fc_by_age_gender)
 ```
 
 ***
@@ -25,7 +31,8 @@ ggplot(aes(x = gender, y = age),
 Notes:
 
 ```{r Plotting Conditional Summaries}
-
+ggplot(aes(x = age, y = median_friend_count), data = df.fc_by_age_gender) +
+  geom_line(aes(color = gender))
 ```
 
 ***
@@ -46,6 +53,10 @@ Notes:
 ```{r}
 install.packages('reshape2')
 library(reshape2)
+df.fc_by_age_gender.wide <- dcast(df.fc_by_age_gender,
+                                  age ~ gender,
+                                  value.var = "median_friend_count")
+head(df.fc_by_age_gender.wide)
 ```
 
 
@@ -55,7 +66,11 @@ library(reshape2)
 Notes:
 
 ```{r Ratio Plot}
-
+#df.fc_by_age_gender.wide$ratio = df.fc_by_age_gender.wide$female / df.fc_by_age_gender.wide$male
+#ggplot(aes(x = age, y = ratio), data = df.fc_by_age_gender.wide) +
+ggplot(aes(x = age, y = female/male), data = df.fc_by_age_gender.wide) +
+  geom_line() +
+  geom_hline(yintercept = 1, linetype = 2, color = "blue", alpha = 0.2)
 ```
 
 ***
@@ -64,7 +79,7 @@ Notes:
 Notes:
 
 ```{r Third Quantitative Variable}
-
+df$year_joined <- floor(2014 - (df$tenure / 365))
 ```
 
 ***
@@ -73,7 +88,7 @@ Notes:
 Notes:
 
 ```{r Cut a Variable}
-
+df$year_joined.bucket <- cut(df$year_joined, c(2004, 2009, 2011, 2012, 2014))
 ```
 
 ***
@@ -82,7 +97,8 @@ Notes:
 Notes:
 
 ```{r Plotting it All Together}
-
+ggplot(aes(x = age, y = friend_count), data = subset(df, !is.na(year_joined.bucket))) +
+  geom_line(aes(color = year_joined.bucket), stat = "summary", fun.y = median)
 ```
 
 ***
@@ -91,7 +107,9 @@ Notes:
 Notes:
 
 ```{r Plot the Grand Mean}
-
+ggplot(aes(x = age, y = friend_count), data = subset(df, !is.na(year_joined.bucket))) +
+  geom_line(aes(color = year_joined.bucket), stat = "summary", fun.y = mean) +
+  geom_line(stat = "summary", fun.y = mean, linetype = 2)
 ```
 
 ***
@@ -100,7 +118,7 @@ Notes:
 Notes:
 
 ```{r Friending Rate}
-
+with(subset(df, tenure > 0), summary(friend_count / tenure))
 ```
 
 ***
@@ -108,12 +126,13 @@ Notes:
 ### Friendships Initiated
 Notes:
 
-What is the median friend rate?
-
+What is the median friend rate? 
+0.2205
 What is the maximum friend rate?
-
+417.0000
 ```{r Friendships Initiated}
-
+ggplot(aes(x = tenure, y = friendships_initiated / tenure), data = subset(df, tenure >= 1)) +
+  geom_line(aes(color = year_joined.bucket), stat = "summary", fun.y = mean)
 ```
 
 ***
@@ -147,17 +166,33 @@ ggplot(aes(x = 90 * round(tenure / 90), y = friendships_initiated / tenure),
             stat = "summary",
             fun.y = mean)
 
+#using geom smooth
+ggplot(aes(x = tenure, y = friendships_initiated / tenure),
+       data = subset(df, tenure >= 1)) +
+  geom_smooth(aes(color = year_joined.bucket))
 ```
 
 ***
 
 ### Sean's NFL Fan Sentiment Study
-Notes:
+Notes: used positive/negative word ratio. Not enough, needed to model  -> used moving averages model
+Was too noisy, so aggregated to one-day moving average.
+Predicting model -> needed to get rid of natural splines -> summarized way too much.
+Then aggregated it up for 7days moving averages, and was able to see the pattern.
+For simple moving averages, very flexible. More lags to moving average -> lower variance, but high bias
+Used splines to accomodate
 
 ***
 
 ### Introducing the Yogurt Data Set
 Notes:
+```{r}
+yo <- read.csv("yogurt.csv")
+str(yo)
+
+yo$id <- factor(yo$id)
+str(yo)
+```
 
 ***
 
@@ -165,7 +200,14 @@ Notes:
 Notes:
 
 ```{r Histograms Revisited}
+p1 <- ggplot(aes(x=price), data = yo) +
+  geom_histogram()
 
+p2 <- ggplot(aes(x=price), data = yo) +
+  geom_histogram(binwidth = 10)
+
+library(gridExtra)
+grid.arrange(p1, p2, ncol=2)
 ```
 
 ***
@@ -174,31 +216,45 @@ Notes:
 Notes:
 
 ```{r Number of Purchases}
+summary(yo)
+length(unique(yo$price))
+table(yo$price)
+yo <- transform(yo, all.purchases = strawberry + blueberry + pina.colada + plain + mixed.berry)
 
+#or
+yo$all.purchases <- yo$strawberry + yo$blueberry + yo$pina.colada + yo$plain + yo$mixed.berry
 ```
 
 ***
 
 ### Prices over Time
-Notes:
+Notes: Common Price do rise over time
 
 ```{r Prices over Time}
-
+ggplot(aes(x = time, y = price), data = yo) +
+  geom_point(alpha = .05, position = "jitter")
 ```
 
 ***
 
 ### Sampling Observations
 Notes:
-
+Multiple observation of same units -> sampling is more helpful as it visualizes well.
 ***
 
 ### Looking at Samples of Households
 
 ```{r Looking at Sample of Households}
+set.seed(630)
+sample.ids <- sample(levels(yo$id), 16)
 
+ggplot(aes(x = time, y = price), data = subset(yo, id %in% sample.ids)) +
+  facet_wrap( ~ id) +
+  geom_line() +
+  geom_point(aes(size = all.purchases), pch = 1)
 ```
 
+People tend to buy more when the price is lower. 
 ***
 
 ### The Limits of Cross Sectional Data
@@ -213,6 +269,15 @@ Notes:
 
 ### Scatterplot Matrix
 Notes:
+```{r}
+#install.packages('GGally')
+library(GGally)
+
+set.seed(1836)
+df_subset <- df[, c(2:15)]
+names(df_subset)
+ggpairs(df_subset[sample.int(nrow(df_subset), 1000), ])
+```
 
 ***
 
